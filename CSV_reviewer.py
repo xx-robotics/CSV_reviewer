@@ -1,3 +1,4 @@
+import pyqtgraph.exporters
 import sys
 import pandas as pd
 import numpy as np
@@ -193,8 +194,10 @@ class TimeSeriesViewer(QtWidgets.QWidget):
     def save_plot(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save image", "", "PNG files (*.png)")
         if file_path:
-            exporter = pg.exporters.ImageExporter(self.canvas.scene().items()[0])
-            exporter.export(file_path)
+            # Grab the entire widget as image
+            pixmap = self.canvas.grab()
+            pixmap.save(file_path, "PNG")
+
 
     def keyPressEvent(self, event):
         if event.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right):
