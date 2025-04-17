@@ -1,3 +1,4 @@
+# viewer.py
 import sys
 import pandas as pd
 import numpy as np
@@ -16,20 +17,18 @@ class TimeSeriesViewer(QtWidgets.QWidget):
         self.setWindowTitle("Time Series Viewer")
         self.resize(1400, 800)
 
-        # === Load CSV ===
         self.data = pd.read_csv(csv_path)
         self.columns = self.data.columns.tolist()
         self.time = self.data[self.columns[0]].values
         self.y_data = {col: self.data[col].values for col in self.columns[1:]}
         self.selected_columns = [self.columns[1]]
         self.max_points = 6000
-        self.peak_ratio_threshold = 10
+        self.peak_ratio_threshold = 50
         self.plots = {}
 
-        # === Plot area ===
         self.canvas = pg.GraphicsLayoutWidget()
 
-        # === Right control panel ===
+        # Right panel setup
         self.selector = QtWidgets.QListWidget()
         self.selector.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.selector.addItems(self.columns[1:])
@@ -53,10 +52,10 @@ class TimeSeriesViewer(QtWidgets.QWidget):
         self.reset_btn = QPushButton("Reset View")
         self.reset_btn.clicked.connect(self.reset_view)
 
-        # === Layouts ===
+        # Right panel layout
         right_panel = QVBoxLayout()
         right_panel.addWidget(QLabel("Select Channels:"))
-        right_panel.addWidget(self.selector, stretch=2)  # ✅ auto-stretch selector
+        right_panel.addWidget(self.selector, stretch=2)
         right_panel.addSpacing(10)
         right_panel.addWidget(self.save_btn)
         right_panel.addSpacing(10)
@@ -109,6 +108,7 @@ class TimeSeriesViewer(QtWidgets.QWidget):
                 plot = self.canvas.addPlot(row=idx, col=0)
                 plot.setLabel('left', col)
                 plot.setMouseEnabled(x=True, y=False)
+                plot.setLimits(xMin=0, xMax=self.time[-1])  # ✅ lock X axis
                 if x_link_plot is None:
                     x_link_plot = plot
                     plot.setLabel('bottom', self.columns[0], units='s')
@@ -124,6 +124,7 @@ class TimeSeriesViewer(QtWidgets.QWidget):
             plot = self.canvas.addPlot(row=0, col=0)
             plot.setLabel('bottom', self.columns[0], units='s')
             plot.setMouseEnabled(x=True, y=False)
+            plot.setLimits(xMin=0, xMax=self.time[-1])  # ✅ lock X axis
             plot.addLegend()
             for idx, col in enumerate(self.selected_columns):
                 pen = pg.mkPen(color=pg.intColor(idx), width=2.5)
@@ -138,8 +139,6 @@ class TimeSeriesViewer(QtWidgets.QWidget):
         for col, (plot, curve) in self.plots.items():
             x = self.time
             y = self.y_data[col]
-
-            # Current window range for drawing (still use downsample)
             x_min, x_max = plot.viewRange()[0]
             mask = (x >= x_min) & (x <= x_max)
             indices = np.nonzero(mask)[0]
@@ -152,10 +151,9 @@ class TimeSeriesViewer(QtWidgets.QWidget):
             y_plot = y[indices]
             curve.setData(x_plot, y_plot)
 
-            # ✅ Set Y axis range based on entire signal, not local window
-            full_y = y
-            y_min = full_y.min()
-            y_max = full_y.max()
+            # Fixed Y range to full signal
+            y_min = y.min()
+            y_max = y.max()
             margin = 0.05 * (y_max - y_min) if y_max > y_min else 1.0
             plot.setYRange(y_min - margin, y_max + margin, padding=0)
 
