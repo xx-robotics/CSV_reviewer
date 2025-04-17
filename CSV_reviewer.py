@@ -1,4 +1,3 @@
-import pyqtgraph.exporters
 import sys
 import pandas as pd
 import numpy as np
@@ -6,7 +5,7 @@ import argparse
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton
 import pyqtgraph as pg
-from PyQt5.QtGui import QBrush, QColor
+from PyQt5.QtGui import QBrush, QColor, QPixmap
 from PyQt5.QtWidgets import QGraphicsRectItem
 
 class TimeSeriesViewer(QtWidgets.QWidget):
@@ -26,16 +25,9 @@ class TimeSeriesViewer(QtWidgets.QWidget):
         self.peak_ratio_threshold = 50
         self.plots = {}
 
-        # Detect 'State' column (case-insensitive)
-        self.state_col = None
-        for col in self.columns:
-            if col.lower() == 'state':
-                self.state_col = col
-                break
-
+        self.state_col = next((col for col in self.columns if col.lower() == 'state'), None)
         self.canvas = pg.GraphicsLayoutWidget()
 
-        # Right panel
         self.selector = QtWidgets.QListWidget()
         self.selector.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.selector.addItems([c for c in self.columns[1:] if c != self.state_col])
@@ -122,7 +114,6 @@ class TimeSeriesViewer(QtWidgets.QWidget):
         self.canvas.clear()
         self.plots.clear()
 
-        # If user selected nothing, but state exists, we still show state background
         only_state = len(self.selected_columns) == 0 and self.state_col is not None
         active_columns = self.selected_columns if not only_state else [self.state_col]
 
@@ -159,8 +150,12 @@ class TimeSeriesViewer(QtWidgets.QWidget):
             plot.setMouseEnabled(x=True, y=False)
             plot.setLimits(xMin=0, xMax=self.time[-1])
             plot.addLegend()
+
             if self.state_col:
                 self.draw_state_highlight(plot, self.time, self.y_data[self.state_col])
+                dummy = pg.PlotDataItem(pen=pg.mkPen(color=(200, 200, 200), width=10))
+                plot.legend.addItem(dummy, "Stance (State==1)")
+
             for idx, col in enumerate(active_columns):
                 if col != self.state_col:
                     pen = pg.mkPen(color=pg.intColor(idx), width=2.5)
@@ -194,10 +189,8 @@ class TimeSeriesViewer(QtWidgets.QWidget):
     def save_plot(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save image", "", "PNG files (*.png)")
         if file_path:
-            # Grab the entire widget as image
             pixmap = self.canvas.grab()
             pixmap.save(file_path, "PNG")
-
 
     def keyPressEvent(self, event):
         if event.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right):
@@ -231,6 +224,9 @@ class TimeSeriesViewer(QtWidgets.QWidget):
     def reset_view(self):
         for plot, _ in self.plots.values():
             plot.setXRange(self.time[0], self.time[-1], padding=0)
+        if self.state_col:
+            for plot, _ in self.plots.values():
+                self.draw_state_highlight(plot, self.time, self.y_data[self.state_col])
 
 # === Command line entry ===
 if __name__ == "__main__":
