@@ -210,6 +210,11 @@ class TimeSeriesViewer(QtWidgets.QWidget):
                 plot.setXRange(t - window_width / 2, t + window_width / 2, padding=0)
         except ValueError:
             pass
+        
+        if self.state_col:
+            for plot, _ in self.plots.values():
+                self.draw_state_highlight(plot, self.time, self.y_data[self.state_col])
+
 
     def set_time_range(self):
         try:
@@ -220,6 +225,11 @@ class TimeSeriesViewer(QtWidgets.QWidget):
                     plot.setXRange(t1, t2, padding=0)
         except ValueError:
             pass
+        
+        if self.state_col:
+            for plot, _ in self.plots.values():
+                self.draw_state_highlight(plot, self.time, self.y_data[self.state_col])
+
 
     def reset_view(self):
         for plot, _ in self.plots.values():
