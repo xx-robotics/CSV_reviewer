@@ -22,7 +22,7 @@ class TimeSeriesViewer(QtWidgets.QWidget):
         self.y_data = {col: self.data[col].values for col in self.columns[1:]}
         self.selected_columns = [self.columns[1]]
         self.max_points = 6000
-        self.peak_ratio_threshold = 10
+        self.peak_ratio_threshold = 3
         self.plots = {}
 
         self.state_col = next((col for col in self.columns if col.lower() == 'state'), None)
